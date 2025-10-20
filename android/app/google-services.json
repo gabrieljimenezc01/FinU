@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "751194274953",
+    "project_id": "finu-d80bc",
+    "storage_bucket": "finu-d80bc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751194274953:android:f6b5e4b647bb2380255a58",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751194274953-ha47gkgkt5sqc504fr3mk13i93ppp64v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfJbbjYJLmKpkkCCLzWn35skahrnbUTqc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751194274953-ha47gkgkt5sqc504fr3mk13i93ppp64v.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751194274953-04816031aq7fdepovrvrjlv0ms7edqji.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.flutterApplication1"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
