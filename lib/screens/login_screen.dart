@@ -69,118 +69,120 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Colors.green[600];
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.colorScheme.primary;
 
-    return WillPopScope(
-      onWillPop: () async => false,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.account_balance_wallet_outlined,
-                        size: 80, color: Colors.green),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Bienvenido',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      size: 80, color: primaryColor),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Bienvenido',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onBackground,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Inicia sesión para continuar',
+                    style: TextStyle(color: theme.hintColor),
+                  ),
+                  const SizedBox(height: 30),
+
+                  TextFormField(
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Correo',
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Inicia sesión para continuar',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 30),
+                    validator: (v) =>
+                        v != null && v.contains('@') ? null : 'Correo inválido',
+                  ),
+                  const SizedBox(height: 16),
 
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Correo',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) =>
-                          v != null && v.contains('@') ? null : 'Correo inválido',
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _passCtrl,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) =>
-                          v != null && v.length >= 6 ? null : 'Mínimo 6 caracteres',
-                    ),
-                    const SizedBox(height: 16),
-
-                    if (_error != null)
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 8),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _loading ? null : _login,
-                        child: _loading
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text('Iniciar sesión'),
+                  TextFormField(
+                    controller: _passCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                     ),
+                    validator: (v) =>
+                        v != null && v.length >= 6 ? null : 'Mínimo 6 caracteres',
+                  ),
+                  const SizedBox(height: 16),
 
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: _loading ? null : _resetPassword,
-                      child: const Text('¿Olvidaste tu contraseña?'),
-                    ),
+                  if (_error != null)
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 8),
 
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: _loading
-                          ? null
-                          : () {
-                              Navigator.pushReplacementNamed(context, '/register');
-                            },
-                      child: const Text(
-                        '¿No tienes cuenta? Regístrate',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
+                      onPressed: _loading ? null : _login,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Iniciar sesión'),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _loading ? null : _resetPassword,
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: _loading
+                        ? null
+                        : () {
+                            Navigator.pushReplacementNamed(context, '/register');
+                          },
+                    child: const Text(
+                      '¿No tienes cuenta? Regístrate',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

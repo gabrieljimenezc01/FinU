@@ -4,6 +4,7 @@ import '../providers/expense_provider.dart';
 import '../models/transaction.dart';
 import '../widgets/expense_chart.dart';
 import 'package:intl/intl.dart';
+import '../widgets/custom_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,9 @@ class HomeScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
+
+      drawer: const CustomDrawer(), // ✅ Se añadió el menú lateral
+
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
         child: transactions.isEmpty
@@ -42,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      color: Colors.teal,
+                      color: Theme.of(context).colorScheme.primary,
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
@@ -102,7 +106,7 @@ class HomeScreen extends StatelessWidget {
         onPressed: () => Navigator.pushNamed(context, '/add'),
         icon: const Icon(Icons.add),
         label: const Text('Agregar'),
-        backgroundColor: Colors.teal,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
 
       // 🔽 Navegación inferior
