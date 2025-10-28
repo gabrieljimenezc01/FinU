@@ -1,77 +1,121 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final user = FirebaseAuth.instance.currentUser;
-    final isDark = themeProvider.isDarkMode;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(
-              user?.email?.split('@')[0] ?? 'Usuario',
-              style: const TextStyle(color: Colors.white),
-            ),
-            accountEmail: Text(
-              user?.email ?? '',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.teal),
-            ),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.teal,
-            ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                child: Center(
+                  child: Text(
+                    'appTitle'.tr(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: Text('homeTitle'.tr()),
+                onTap: () {
+                  Navigator.popUntil(context, ModalRoute.withName('/'));
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text('language'.tr()),
+                subtitle: Text('changeLanguage'.tr()),
+                onTap: () {
+                  _showLanguageDialog(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                ),
+                title: Text('themeToggle'.tr()),
+                onTap: () {
+                  themeProvider.toggleTheme();
+                },
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  '© ${DateTime.now().year}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Perfil'),
-            onTap: () {
-              Navigator.pop(context);
-              // Próximamente: Navigator.pushNamed(context, '/perfil');
-            },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode_outlined),
-            title: const Text('Modo oscuro'),
-            value: themeProvider.isDarkMode,
-            onChanged: (_) => themeProvider.toggleTheme(),
-          ),
-          ListTile(
-            leading: const Icon(Icons.language_outlined),
-            title: const Text('Idioma'),
-            onTap: () {
-              Navigator.pop(context);
-              // Próximamente: Navigator.pushNamed(context, '/idioma');
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout_outlined, color: Colors.red),
-            title: const Text('Cerrar sesión'),
-            onTap: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
-              }
-            },
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    final current = context.locale;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('language'.tr()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<Locale>(
+                value: const Locale('es', 'ES'),
+                groupValue: current,
+                title: Text('spanish'.tr()),
+                onChanged: (loc) {
+                  if (loc != null) {
+                    context.setLocale(loc);
+                    Navigator.of(ctx).pop();
+                  }
+                },
+              ),
+              RadioListTile<Locale>(
+                value: const Locale('en', 'US'),
+                groupValue: current,
+                title: Text('english'.tr()),
+                onChanged: (loc) {
+                  if (loc != null) {
+                    context.setLocale(loc);
+                    Navigator.of(ctx).pop();
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('close'.tr()),
+            ),
+          ],
+        );
+      },
     );
   }
 }

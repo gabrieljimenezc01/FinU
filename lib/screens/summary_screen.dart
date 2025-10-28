@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../providers/expense_provider.dart';
 
 class SummaryScreen extends StatelessWidget {
@@ -17,7 +18,7 @@ class SummaryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Resumen'),
+        title: Text('summary_title'.tr()),
         centerTitle: true,
       ),
       body: Padding(
@@ -27,14 +28,14 @@ class SummaryScreen extends StatelessWidget {
             Row(
               children: [
                 _SummaryCard(
-                  title: 'Ingresos',
+                  title: 'income'.tr(),
                   amount: totalIncome,
                   color: Colors.green,
                   icon: Icons.arrow_upward,
                 ),
                 const SizedBox(width: 10),
                 _SummaryCard(
-                  title: 'Gastos',
+                  title: 'expense'.tr(),
                   amount: totalExpense,
                   color: Colors.red,
                   icon: Icons.arrow_downward,
@@ -50,9 +51,9 @@ class SummaryScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text(
-                      'Balance Total',
-                      style: TextStyle(fontSize: 18),
+                    Text(
+                      'total_balance'.tr(),
+                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -72,7 +73,7 @@ class SummaryScreen extends StatelessWidget {
             const Spacer(),
             ElevatedButton.icon(
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Volver'),
+              label: Text('back'.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
                 padding:

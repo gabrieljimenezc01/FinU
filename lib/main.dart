@@ -1,29 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/login_screen.dart';
-import 'package:flutter_application_1/screens/register_screen.dart';
-import 'package:flutter_application_1/screens/splash_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 import 'providers/expense_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/summary_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'firebase_options.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicialización de EasyLocalization
+  await EasyLocalization.ensureInitialized();
+
+  // Inicialización de Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Cargar preferencia de tema antes de ejecutar la app
+  final themeProvider = ThemeProvider();
+  await themeProvider.loadThemePreference();
+
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()), // ✅ nuevo
+    EasyLocalization(
+      // ✅ Agregamos los locales exactos para inglés y español
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('es', 'ES'),
       ],
-      child: const MyApp(),
+
+      // ✅ Ruta correcta donde están los JSON
+      path: 'assets/lang', // 📂 Asegúrate de que exista esta carpeta
+
+      fallbackLocale: const Locale('es', 'ES'),
+      saveLocale: true, // ✅ guarda el idioma seleccionado
+
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+          ChangeNotifierProvider(create: (_) => themeProvider),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -36,9 +61,16 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'Administrador de Gastos',
+      title: tr('app_title'),
       debugShowCheckedModeBanner: false,
-      themeMode: themeProvider.currentTheme, // ✅ se usa el provider
+
+      // 🌍 Configuración de localización
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
+
+      // 🎨 Configuración de temas
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         colorSchemeSeed: Colors.teal,
         useMaterial3: true,
@@ -51,6 +83,8 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.grey[900],
       ),
+
+      // 🚀 Rutas
       initialRoute: '/splash',
       routes: {
         '/splash': (context) => const SplashScreen(),

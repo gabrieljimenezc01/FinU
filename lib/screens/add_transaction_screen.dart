@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../providers/expense_provider.dart';
 import '../models/transaction.dart';
-import '../services/expense_categorizer.dart'; // 👈 Import del modelo IA
+import '../services/expense_categorizer.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -17,9 +18,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _descController = TextEditingController();
   final _amountController = TextEditingController();
 
-  final categorizer = ExpenseCategorizer(); // 🧠 Modelo de IA
+  final categorizer = ExpenseCategorizer();
 
-  String _category = 'Otros'; // Categoría inicial
+  String _category = 'Otros';
   bool _isIncome = false;
   bool _loadingCategory = false;
   bool _modelReady = false;
@@ -31,7 +32,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _descController.addListener(_onDescriptionChanged);
   }
 
-  /// 🔤 Normaliza el nombre de la categoría predicha
   String _normalizeCategory(String raw) {
     final lower = raw.toLowerCase().trim();
     switch (lower) {
@@ -59,7 +59,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  /// Cargar el modelo IA al iniciar la pantalla
   Future<void> _initializeModel() async {
     try {
       setState(() => _loadingCategory = true);
@@ -75,20 +74,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  /// Detectar cambios en la descripción y predecir la categoría
   Future<void> _onDescriptionChanged() async {
     final text = _descController.text.trim();
-
-    // No predecir si el modelo no está listo o el texto es muy corto
     if (!_modelReady || text.isEmpty || text.split(' ').length < 2) return;
 
     setState(() => _loadingCategory = true);
     try {
       final predicted = await categorizer.predictCategory(text);
-
-      // Normalizamos para que coincida con las categorías del Dropdown
       final normalized = _normalizeCategory(predicted);
-
       setState(() => _category = normalized);
     } catch (e) {
       print('⚠️ Error en predicción: $e');
@@ -112,7 +105,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agregar Transacción'),
+        title: Text('add_transaction_title'.tr()), // 🌍 Traducido
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -126,7 +119,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               TextFormField(
                 controller: _descController,
                 decoration: InputDecoration(
-                  labelText: 'Descripción',
+                  labelText: 'description'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.note_alt_outlined),
                   suffixIcon: _loadingCategory
@@ -141,7 +134,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       : const Icon(Icons.auto_fix_high_outlined, color: Colors.teal),
                 ),
                 validator: (v) =>
-                    v!.isEmpty ? 'Ingrese una descripción válida' : null,
+                    v!.isEmpty ? 'enter_valid_description'.tr() : null,
               ),
 
               const SizedBox(height: 16),
@@ -150,34 +143,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Monto',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+                decoration: InputDecoration(
+                  labelText: 'amount'.tr(),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.attach_money),
                 ),
-                validator: (v) => v!.isEmpty ? 'Ingrese un monto' : null,
+                validator: (v) => v!.isEmpty ? 'enter_amount'.tr() : null,
               ),
 
               const SizedBox(height: 16),
 
-              /// 🏷️ Categoría (automática + editable)
+              /// 🏷️ Categoría (IA o manual)
               DropdownButtonFormField<String>(
                 value: _category,
-                decoration: const InputDecoration(
-                  labelText: 'Categoría (IA o manual)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'category_ai_or_manual'.tr(),
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Comida', child: Text('Comida')),
-                  DropdownMenuItem(value: 'Transporte', child: Text('Transporte')),
-                  DropdownMenuItem(value: 'Entretenimiento', child: Text('Entretenimiento')),
-                  DropdownMenuItem(value: 'Hogar', child: Text('Hogar')),
-                  DropdownMenuItem(value: 'Salud', child: Text('Salud')),
-                  DropdownMenuItem(value: 'Compras', child: Text('Compras')),
-                  DropdownMenuItem(value: 'Educación', child: Text('Educación')),
-                  DropdownMenuItem(value: 'Suscripciones', child: Text('Suscripciones')),
-                  DropdownMenuItem(value: 'Finanzas', child: Text('Finanzas')),
-                  DropdownMenuItem(value: 'Otros', child: Text('Otros')),
+                items: [
+                  DropdownMenuItem(value: 'Comida', child: Text('food'.tr())),
+                  DropdownMenuItem(value: 'Transporte', child: Text('transport'.tr())),
+                  DropdownMenuItem(value: 'Entretenimiento', child: Text('entertainment'.tr())),
+                  DropdownMenuItem(value: 'Hogar', child: Text('home'.tr())),
+                  DropdownMenuItem(value: 'Salud', child: Text('health'.tr())),
+                  DropdownMenuItem(value: 'Compras', child: Text('shopping'.tr())),
+                  DropdownMenuItem(value: 'Educación', child: Text('education'.tr())),
+                  DropdownMenuItem(value: 'Suscripciones', child: Text('subscriptions'.tr())),
+                  DropdownMenuItem(value: 'Finanzas', child: Text('finance'.tr())),
+                  DropdownMenuItem(value: 'Otros', child: Text('others'.tr())),
                 ],
                 onChanged: (v) => setState(() => _category = v!),
               ),
@@ -186,7 +179,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
               /// 💵 Tipo de transacción
               SwitchListTile(
-                title: const Text('¿Es ingreso?'),
+                title: Text('is_income'.tr()),
                 value: _isIncome,
                 activeThumbColor: Colors.teal,
                 onChanged: (v) => setState(() => _isIncome = v),
@@ -204,7 +197,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   backgroundColor: Colors.teal,
                 ),
-                label: const Text('Guardar'),
+                label: Text('save'.tr()),
                 onPressed: _loadingCategory
                     ? null
                     : () {
