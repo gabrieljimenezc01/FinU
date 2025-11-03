@@ -47,6 +47,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   cloud_firestore: ^6.1.0
+  flutter_launcher_icons: ^0.14.4
+  rename: ^3.1.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -107,3 +109,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"

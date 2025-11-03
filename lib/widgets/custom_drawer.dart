@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -70,8 +71,6 @@ class CustomDrawer extends StatelessWidget {
                   style: const TextStyle(color: Colors.red),
                 ),
                 onTap: () async {
-                  // Aquí va tu lógica para cerrar sesión
-                  // Ejemplo: limpiar datos o redirigir al login
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -91,9 +90,14 @@ class CustomDrawer extends StatelessWidget {
                   );
 
                   if (confirm == true) {
-                    // Aquí puedes limpiar tu sesión (por ejemplo: SharedPreferences)
-                    // y redirigir al login
-                    Navigator.pushReplacementNamed(context, '/login');
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.pushReplacementNamed(context, '/login');
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al cerrar sesión: $e')),
+                      );
+                    }
                   }
                 },
               ),

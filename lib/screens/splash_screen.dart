@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/login_screen.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/screens/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -12,14 +13,27 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _checkSession();
+  }
 
-    Future.delayed(const Duration(seconds: 3), () {
+  Future<void> _checkSession() async {
+    await Future.delayed(const Duration(seconds: 3)); // espera para mostrar splash
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!mounted) return;
+
+    if (user != null) {
+      // ✅ Usuario ya autenticado → ir al Home
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    } else {
+      // 🚪 No hay sesión → ir al Login
       Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-      (route) => false, 
-    );
-    });
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -34,7 +48,6 @@ class _SplashScreenState extends State<SplashScreen> {
               fit: BoxFit.cover,
             ),
           ),
-
           Positioned(
             bottom: 200,
             child: Column(
