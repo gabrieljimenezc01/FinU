@@ -58,7 +58,46 @@ class CustomDrawer extends StatelessWidget {
                   themeProvider.toggleTheme();
                 },
               ),
+
               const Spacer(),
+              const Divider(),
+
+              // 🔹 Nueva opción: Cerrar sesión
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: Text(
+                  'Cerrar sesión',
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () async {
+                  // Aquí va tu lógica para cerrar sesión
+                  // Ejemplo: limpiar datos o redirigir al login
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Confirmar'),
+                      content: const Text('¿Deseas cerrar sesión?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Cerrar sesión'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    // Aquí puedes limpiar tu sesión (por ejemplo: SharedPreferences)
+                    // y redirigir al login
+                    Navigator.pushReplacementNamed(context, '/login');
+                  }
+                },
+              ),
+
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Text(
