@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 import '../providers/expense_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/transaction.dart';
-import '../widgets/expense_chart.dart';
 import '../widgets/custom_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await Provider.of<ExpenseProvider>(context, listen: false)
           .fetchTransactionsFromFirebase(user.uid);
     }
+
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -39,6 +42,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = Provider.of<ExpenseProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final transactions = provider.transactions;
+
+    final now = DateTime.now();
+    final currentMonthTx = transactions.where(
+      (tx) => tx.date.month == now.month && tx.date.year == now.year,
+    );
+
+    final ingresos = currentMonthTx.where((tx) => tx.isIncome).toList();
+    final egresos = currentMonthTx.where((tx) => !tx.isIncome).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -56,9 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   : Icons.dark_mode,
             ),
             tooltip: 'themeToggle'.tr(),
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
+            onPressed: () => themeProvider.toggleTheme(),
           ),
         ],
       ),
@@ -74,58 +83,90 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(color: Colors.grey),
                       ),
                     )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            color: Theme.of(context).colorScheme.primary,
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'totalBalance'.tr(),
-                                    style: const TextStyle(
-                                        color: Colors.white70, fontSize: 16),
+                  : RefreshIndicator(
+                      onRefresh: _loadTransactions,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // 💰 Balance Total centrado
+                            Center(
+                              child: Card(
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                color: Theme.of(context).colorScheme.primary,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'totalBalance'.tr(),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '\$${NumberFormat("#,##0.00", "es_CO").format(provider.totalBalance)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '\$${NumberFormat("#,##0.00", "es_CO").format(provider.totalBalance)}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 30),
-                          Card(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child:
-                                  ExpenseChart(transactions: transactions),
+
+                            const SizedBox(height: 25),
+
+                            // 📈 Gráfica de Ingresos (verdes variados)
+                            if (ingresos.isNotEmpty)
+                              _buildChartCard(
+                                context,
+                                title: 'income_chart'.tr(),
+                                transactions: ingresos,
+                                isIncome: true,
+                              ),
+
+                            const SizedBox(height: 25),
+
+                            // 📉 Gráfica de Egresos (rojos variados)
+                            if (egresos.isNotEmpty)
+                              _buildChartCard(
+                                context,
+                                title: 'expense_chart'.tr(),
+                                transactions: egresos,
+                                isIncome: false,
+                              ),
+
+                            const SizedBox(height: 30),
+
+                            // 🧾 Últimos movimientos
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'lastMovements'.tr(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium!
+                                    .copyWith(fontWeight: FontWeight.bold),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 30),
-                          Text('lastMovements'.tr(),
-                              style:
-                                  Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 10),
-                          ...transactions.reversed
-                              .map((tx) => _TransactionTile(tx)),
-                        ],
+                            const SizedBox(height: 10),
+                            ...transactions.take(10).map((tx) => _TransactionTile(tx)),
+                          ],
+                        ),
                       ),
                     ),
             ),
@@ -149,11 +190,89 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  /// 🔹 Tarjeta con gráfico circular — ahora con colores variados según tipo
+  Widget _buildChartCard(BuildContext context,
+      {required String title,
+      required List<TransactionModel> transactions,
+      required bool isIncome}) {
+    final Map<String, double> data = {};
+    for (var tx in transactions) {
+      data[tx.category] = (data[tx.category] ?? 0) + tx.amount;
+    }
+
+    // 🎨 Paletas de colores
+    final incomeColors = [
+      Colors.green[800]!,
+      Colors.green[600]!,
+      Colors.lightGreen[500]!,
+      Colors.teal[400]!,
+      Colors.greenAccent[400]!,
+    ];
+
+    final expenseColors = [
+      Colors.red[800]!,
+      Colors.red[600]!,
+      Colors.deepOrange[500]!,
+      Colors.pink[400]!,
+      Colors.redAccent[400]!,
+    ];
+
+    final colorPalette = isIncome ? incomeColors : expenseColors;
+
+    final sections = data.entries.map((entry) {
+      final index = data.keys.toList().indexOf(entry.key);
+      final color = colorPalette[index % colorPalette.length];
+      final percentage =
+          (entry.value / data.values.reduce((a, b) => a + b) * 100)
+              .toStringAsFixed(1);
+      return PieChartSectionData(
+        color: color,
+        value: entry.value,
+        title: '${entry.key}\n$percentage%',
+        radius: 60,
+        titleStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }).toList();
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium!
+                  .copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sections: sections,
+                  centerSpaceRadius: 35,
+                  sectionsSpace: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TransactionTile extends StatelessWidget {
   final TransactionModel tx;
-
   const _TransactionTile(this.tx);
 
   @override
@@ -168,8 +287,9 @@ class _TransactionTile extends StatelessWidget {
           backgroundColor:
               tx.isIncome ? Colors.green[100] : Colors.red[100],
           child: Icon(
-              tx.isIncome ? Icons.arrow_upward : Icons.arrow_downward,
-              color: tx.isIncome ? Colors.green : Colors.red),
+            tx.isIncome ? Icons.arrow_upward : Icons.arrow_downward,
+            color: tx.isIncome ? Colors.green : Colors.red,
+          ),
         ),
         title: Text(tx.description,
             style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -178,8 +298,9 @@ class _TransactionTile extends StatelessWidget {
         trailing: Text(
           '\$${NumberFormat("#,##0.00", "es_CO").format(tx.amount)}',
           style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: tx.isIncome ? Colors.green : Colors.red),
+            fontWeight: FontWeight.bold,
+            color: tx.isIncome ? Colors.green : Colors.red,
+          ),
         ),
       ),
     );
