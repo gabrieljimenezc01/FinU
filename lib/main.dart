@@ -11,6 +11,7 @@ import 'screens/add_transaction_screen.dart';
 import 'screens/summary_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/transactions_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -93,6 +94,7 @@ class MyApp extends StatelessWidget {
         '/summary': (context) => const SummaryScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/transactions': (context) => const TransactionsScreen(),
       },
     );
   }

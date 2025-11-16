@@ -36,6 +36,74 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
+  /// 🔹 Editar transacción existente
+  Future<void> updateTransaction(TransactionModel updatedTx) async {
+    try {
+      final index = _transactions.indexWhere((t) => t.id == updatedTx.id);
+      if (index == -1) return;
+
+      final oldTx = _transactions[index];
+      _transactions[index] = updatedTx;
+      notifyListeners();
+
+      // Actualizar en Firestore
+      final oldCollection = oldTx.isIncome ? 'Ingresos' : 'Egresos';
+      final newCollection = updatedTx.isIncome ? 'Ingresos' : 'Egresos';
+
+      // Si cambió de tipo (ingreso <-> egreso), eliminar del anterior y crear en el nuevo
+      if (oldCollection != newCollection) {
+        await _firestore.collection(oldCollection).doc(updatedTx.id).delete();
+        
+        final docRef = await _firestore.collection(newCollection).add({
+          'description': updatedTx.description,
+          'category': updatedTx.category,
+          'amount': updatedTx.amount,
+          'date': updatedTx.date.toIso8601String(),
+          'isIncome': updatedTx.isIncome,
+          'id_user': _auth.currentUser?.uid,
+        });
+
+        // Actualizar el ID local con el nuevo ID de Firestore
+        _transactions[index] = TransactionModel(
+          id: docRef.id,
+          description: updatedTx.description,
+          category: updatedTx.category,
+          amount: updatedTx.amount,
+          date: updatedTx.date,
+          isIncome: updatedTx.isIncome,
+        );
+      } else {
+        // Actualizar en la misma colección
+        await _firestore.collection(newCollection).doc(updatedTx.id).update({
+          'description': updatedTx.description,
+          'category': updatedTx.category,
+          'amount': updatedTx.amount,
+          'date': updatedTx.date.toIso8601String(),
+          'isIncome': updatedTx.isIncome,
+        });
+      }
+
+      debugPrint('✅ Transacción actualizada correctamente');
+    } catch (e) {
+      debugPrint('❌ Error al actualizar transacción: $e');
+    }
+  }
+
+  /// 🔹 Eliminar transacción
+  Future<void> deleteTransaction(String id, bool isIncome) async {
+    try {
+      _transactions.removeWhere((t) => t.id == id);
+      notifyListeners();
+
+      final collection = isIncome ? 'Ingresos' : 'Egresos';
+      await _firestore.collection(collection).doc(id).delete();
+
+      debugPrint('✅ Transacción eliminada correctamente');
+    } catch (e) {
+      debugPrint('❌ Error al eliminar transacción: $e');
+    }
+  }
+
   /// 🔹 Cargar transacciones desde Firestore (por usuario)
   Future<void> fetchTransactionsFromFirebase(String userId) async {
     try {
@@ -91,7 +159,7 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
-  /// 💰 Calcular balance total
+  /// 💰 Calcular balance total (todos los tiempos)
   double get totalBalance {
     double income = 0;
     double expense = 0;
@@ -103,5 +171,43 @@ class ExpenseProvider with ChangeNotifier {
       }
     }
     return income - expense;
+  }
+
+  /// 🔹 Obtener transacciones de un mes específico
+  List<TransactionModel> getTransactionsByMonth(int month, int year) {
+    return _transactions
+        .where((t) => t.date.month == month && t.date.year == year)
+        .toList();
+  }
+
+  /// 🔹 Obtener ingresos de un mes
+  double getMonthIncome(int month, int year) {
+    return getTransactionsByMonth(month, year)
+        .where((t) => t.isIncome)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// 🔹 Obtener gastos de un mes
+  double getMonthExpense(int month, int year) {
+    return getTransactionsByMonth(month, year)
+        .where((t) => !t.isIncome)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// 🔹 Obtener balance de un mes
+  double getMonthBalance(int month, int year) {
+    return getMonthIncome(month, year) - getMonthExpense(month, year);
+  }
+
+  /// 🔍 Buscar transacciones por texto
+  List<TransactionModel> searchTransactions(String query, int month, int year) {
+    final monthTransactions = getTransactionsByMonth(month, year);
+    if (query.isEmpty) return monthTransactions;
+
+    final lowerQuery = query.toLowerCase();
+    return monthTransactions.where((t) {
+      return t.description.toLowerCase().contains(lowerQuery) ||
+          t.category.toLowerCase().contains(lowerQuery);
+    }).toList();
   }
 }
