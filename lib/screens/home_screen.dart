@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../providers/expense_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/transaction.dart';
-import '../widgets/expense_chart.dart';
 import '../widgets/custom_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await Provider.of<ExpenseProvider>(context, listen: false)
           .fetchTransactionsFromFirebase(user.uid);
     }
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -42,9 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = Provider.of<ExpenseProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final transactions = provider.transactions;
-    
+
     // 🔹 Datos del mes actual
     final now = DateTime.now();
+    final currentMonthTx = transactions.where(
+      (tx) => tx.date.month == now.month && tx.date.year == now.year,
+    ).toList();
+
+    final ingresos = currentMonthTx.where((tx) => tx.isIncome).toList();
+    final egresos = currentMonthTx.where((tx) => !tx.isIncome).toList();
+
     final monthIncome = provider.getMonthIncome(now.month, now.year);
     final monthExpense = provider.getMonthExpense(now.month, now.year);
     final monthBalance = monthIncome - monthExpense;
@@ -65,207 +72,408 @@ class _HomeScreenState extends State<HomeScreen> {
                   : Icons.dark_mode,
             ),
             tooltip: 'themeToggle'.tr(),
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
+            onPressed: () => themeProvider.toggleTheme(),
           ),
         ],
       ),
       drawer: const CustomDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
+          : RefreshIndicator(
+              onRefresh: _loadTransactions,
               child: transactions.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.account_balance_wallet_outlined,
-                              size: 80, color: Colors.grey[400]),
-                          const SizedBox(height: 16),
-                          Text(
-                            'noTransactions'.tr(),
-                            style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                  ? ListView(
+                      children: [
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.account_balance_wallet_outlined,
+                                  size: 80, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'noTransactions'.tr(),
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 18),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/add'),
+                                icon: const Icon(Icons.add),
+                                label: Text('add'.tr()),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () => Navigator.pushNamed(context, '/add'),
-                            icon: const Icon(Icons.add),
-                            label: Text('addFirst'.tr()),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
+                        ),
+                      ],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        // 🔹 Balance total general - Diseño mejorado
+                        Card(
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: provider.totalBalance >= 0
+                                    ? [
+                                        Theme.of(context).colorScheme.primary,
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.8),
+                                      ]
+                                    : [
+                                        Colors.red[700]!,
+                                        Colors.red[500]!,
+                                      ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(
+                                              Icons.account_balance_wallet,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'totalBalance'.tr(),
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Patrimonio total',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withOpacity(0.6),
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              provider.totalBalance >= 0
+                                                  ? Icons.trending_up
+                                                  : Icons.trending_down,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              provider.totalBalance >= 0
+                                                  ? 'Positivo'
+                                                  : 'Negativo',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    '\$${NumberFormat("#,##0.00", "es_CO").format(provider.totalBalance)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -1,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadTransactions,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 🔹 Balance total general
-                            Card(
-                              elevation: 4,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              color: Theme.of(context).colorScheme.primary,
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // 🔹 Resumen del mes actual - Diseño mejorado
+                        Card(
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Text(
-                                      'totalBalance'.tr(),
-                                      style: const TextStyle(
-                                          color: Colors.white70, fontSize: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        Icons.calendar_month,
+                                        color:
+                                            Theme.of(context).colorScheme.primary,
+                                        size: 20,
+                                      ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(width: 12),
                                     Text(
-                                      '\$${NumberFormat("#,##0.00", "es_CO").format(provider.totalBalance)}',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.bold),
+                                      _capitalize(DateFormat.MMMM('es').format(now)),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
+                                const SizedBox(height: 20),
 
-                            const SizedBox(height: 20),
-
-                            // 🔹 Resumen del mes actual
-                            Text(
-                              'Resumen de ${DateFormat.MMMM('es').format(now)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _SummaryCard(
-                                    title: 'income'.tr(),
-                                    amount: monthIncome,
-                                    color: Colors.green,
-                                    icon: Icons.arrow_upward,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _SummaryCard(
-                                    title: 'expense'.tr(),
-                                    amount: monthExpense,
-                                    color: Colors.red,
-                                    icon: Icons.arrow_downward,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // 🔹 Balance del mes
-                            Card(
-                              elevation: 2,
-                              color: monthBalance >= 0
-                                  ? Colors.teal.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                // Ingresos y Egresos en fila
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.account_balance_wallet,
-                                          color: monthBalance >= 0
-                                              ? Colors.teal
-                                              : Colors.red,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Balance del mes',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: monthBalance >= 0
-                                                ? Colors.teal
-                                                : Colors.red,
-                                          ),
-                                        ),
-                                      ],
+                                    Expanded(
+                                      child: _MonthSummaryItem(
+                                        icon: Icons.trending_up,
+                                        label: 'Ingreso',
+                                        amount: monthIncome,
+                                        color: Colors.green,
+                                      ),
                                     ),
-                                    Text(
-                                      '\$${NumberFormat("#,##0.00", "es_CO").format(monthBalance)}',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: monthBalance >= 0
-                                            ? Colors.teal
-                                            : Colors.red,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _MonthSummaryItem(
+                                        icon: Icons.trending_down,
+                                        label: 'Gasto',
+                                        amount: monthExpense,
+                                        color: Colors.red,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
 
-                            const SizedBox(height: 30),
+                                const SizedBox(height: 16),
 
-                            // 🔹 Gráfico
-                            Card(
-                              elevation: 3,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: ExpenseChart(
-                                    transactions: provider.getTransactionsByMonth(
-                                        now.month, now.year)),
-                              ),
-                            ),
+                                // Divider decorativo
+                                Container(
+                                  height: 1,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.grey.withOpacity(0.1),
+                                        Colors.grey.withOpacity(0.3),
+                                        Colors.grey.withOpacity(0.1),
+                                      ],
+                                    ),
+                                  ),
+                                ),
 
-                            const SizedBox(height: 30),
+                                const SizedBox(height: 16),
 
-                            // 🔹 Últimas transacciones
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('lastMovements'.tr(),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold)),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pushNamed(context, '/transactions'),
-                                  child: Text('seeAll'.tr()),
+                                // Balance del mes destacado
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: monthBalance >= 0
+                                          ? [
+                                              Colors.teal.withOpacity(0.1),
+                                              Colors.teal.withOpacity(0.05),
+                                            ]
+                                          : [
+                                              Colors.red.withOpacity(0.1),
+                                              Colors.red.withOpacity(0.05),
+                                            ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: monthBalance >= 0
+                                          ? Colors.teal.withOpacity(0.3)
+                                          : Colors.red.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: monthBalance >= 0
+                                                  ? Colors.teal
+                                                  : Colors.red,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              Icons.account_balance_wallet,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Balance del mes',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                monthBalance >= 0
+                                                    ? 'Superávit'
+                                                    : 'Déficit',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: monthBalance >= 0
+                                                      ? Colors.teal
+                                                      : Colors.red,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      Flexible(
+                                        child: Text(
+                                          '\$${NumberFormat("#,##0", "es_CO").format(monthBalance.abs())}',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: monthBalance >= 0
+                                                ? Colors.teal[700]
+                                                : Colors.red[700],
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
+                          ),
+                        ),
 
-                            ...transactions.take(5).map((tx) => _TransactionTile(
-                                  tx: tx,
-                                  onTap: () => _showTransactionOptions(context, tx),
-                                )),
+                        const SizedBox(height: 30),
+
+                        // 🔹 Gráfico de Ingresos
+                        if (ingresos.isNotEmpty)
+                          _buildChartCard(
+                            context,
+                            title: 'Ingresos por Categoría',
+                            transactions: ingresos,
+                            isIncome: true,
+                          ),
+
+                        if (ingresos.isNotEmpty && egresos.isNotEmpty)
+                          const SizedBox(height: 20),
+
+                        // 🔹 Gráfico de Egresos
+                        if (egresos.isNotEmpty)
+                          _buildChartCard(
+                            context,
+                            title: 'Gastos por Categoría',
+                            transactions: egresos,
+                            isIncome: false,
+                          ),
+
+                        const SizedBox(height: 30),
+
+                        // 🔹 Últimas transacciones
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('lastMovements'.tr(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold)),
+                            TextButton(
+                              onPressed: () => Navigator.pushNamed(
+                                  context, '/transactions'),
+                              child: Text('seeAll'.tr()),
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 10),
+
+                        ...transactions.take(5).map((tx) => _TransactionTile(
+                              tx: tx,
+                              onTap: () => _showTransactionOptions(context, tx),
+                            )),
+
+                        const SizedBox(height: 80), // Espacio para el FAB
+                      ],
                     ),
             ),
       floatingActionButton: FloatingActionButton.extended(
@@ -284,18 +492,99 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/transactions');
               break;
             case 2:
-              Navigator.pushNamed(context, '/profile');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Perfil próximamente')),
+              );
               break;
           }
         },
         destinations: [
           NavigationDestination(
-              icon: const Icon(Icons.home), label: 'home'.tr()),
+              icon: const Icon(Icons.home), label: 'Hogar'),
           NavigationDestination(
               icon: const Icon(Icons.list_alt), label: 'transactions'.tr()),
           NavigationDestination(
               icon: const Icon(Icons.person), label: 'profile'.tr()),
         ],
+      ),
+    );
+  }
+
+  /// 🔹 Método para construir gráficos circulares separados
+  Widget _buildChartCard(BuildContext context,
+      {required String title,
+      required List<TransactionModel> transactions,
+      required bool isIncome}) {
+    final Map<String, double> data = {};
+    for (var tx in transactions) {
+      data[tx.category] = (data[tx.category] ?? 0) + tx.amount;
+    }
+
+    // 🎨 Paletas de colores
+    final incomeColors = [
+      Colors.green[800]!,
+      Colors.green[600]!,
+      Colors.lightGreen[500]!,
+      Colors.teal[400]!,
+      Colors.greenAccent[400]!,
+    ];
+
+    final expenseColors = [
+      Colors.red[800]!,
+      Colors.red[600]!,
+      Colors.deepOrange[500]!,
+      Colors.pink[400]!,
+      Colors.redAccent[400]!,
+    ];
+
+    final colorPalette = isIncome ? incomeColors : expenseColors;
+
+    final sections = data.entries.map((entry) {
+      final index = data.keys.toList().indexOf(entry.key);
+      final color = colorPalette[index % colorPalette.length];
+      final percentage =
+          (entry.value / data.values.reduce((a, b) => a + b) * 100)
+              .toStringAsFixed(1);
+      return PieChartSectionData(
+        color: color,
+        value: entry.value,
+        title: '${entry.key}\n$percentage%',
+        radius: 60,
+        titleStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }).toList();
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium!
+                  .copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sections: sections,
+                  centerSpaceRadius: 35,
+                  sectionsSpace: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -353,10 +642,79 @@ class _HomeScreenState extends State<HomeScreen> {
                 SnackBar(content: Text('transactionDeleted'.tr())),
               );
             },
-            child: Text('delete'.tr(), style: const TextStyle(color: Colors.red)),
+            child:
+                Text('delete'.tr(), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
+    );
+  }
+
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
+  String _formatCurrency(double amount) {
+    final formatter = NumberFormat("#,##0", "es_CO");
+    return formatter.format(amount);
+  }
+}
+
+// 🔹 Widget para items del resumen mensual
+class _MonthSummaryItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double amount;
+  final Color color;
+
+  const _MonthSummaryItem({
+    required this.icon,
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '\$${NumberFormat("#,##0", "es_CO").format(amount)}',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
