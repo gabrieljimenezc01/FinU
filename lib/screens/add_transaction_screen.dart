@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:easy_localization/easy_localization.dart';
+
 import '../providers/expense_provider.dart';
 import '../models/transaction.dart';
 import '../services/expense_categorizer.dart';
@@ -15,256 +17,698 @@ class AddTransactionScreen extends StatefulWidget {
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _descController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
-
+  
   final categorizer = ExpenseCategorizer();
-
-  String _category = 'Otros';
-  bool _loadingCategory = false;
+  
+  bool isIncome = true; // Por defecto: Ingreso
+  String selectedCategory = 'Otros';
+  DateTime selectedDate = DateTime.now();
+  
   bool _modelReady = false;
+  bool _predicting = false;
+  Timer? _debounce;
+  
+  TransactionModel? transactionToEdit;
+  bool isEditMode = false;
+
+  // Categorías
+  final List<String> incomeCategories = [
+    'Salario',
+    'Freelance',
+    'Inversiones',
+    'Venta',
+    'Regalo',
+    'Otros'
+  ];
+
+  final List<String> expenseCategories = [
+    'Comida',
+    'Transporte',
+    'Entretenimiento',
+    'Compras',
+    'Servicios',
+    'Salud',
+    'Educación',
+    'Hogar',
+    'Suscripciones',
+    'Otros'
+  ];
 
   @override
   void initState() {
     super.initState();
     _initializeModel();
-    _descController.addListener(_onDescriptionChanged);
-  }
-
-  String _normalizeCategory(String raw) {
-    final lower = raw.toLowerCase().trim();
-    switch (lower) {
-      case 'comida':
-      case 'food':
-        return 'Comida';
-      case 'transporte':
-      case 'transport':
-        return 'Transporte';
-      case 'entretenimiento':
-      case 'entertainment':
-        return 'Entretenimiento';
-      case 'hogar':
-      case 'home':
-        return 'Hogar';
-      case 'salud':
-      case 'health':
-        return 'Salud';
-      case 'compras':
-      case 'shopping':
-        return 'Compras';
-      case 'educacion':
-      case 'educación':
-      case 'education':
-        return 'Educación';
-      case 'suscripciones':
-      case 'subscriptions':
-        return 'Suscripciones';
-      case 'finanzas':
-      case 'finance':
-        return 'Finanzas';
-      default:
-        return 'Otros';
-    }
-  }
-
-  Future<void> _initializeModel() async {
-    try {
-      setState(() => _loadingCategory = true);
-      await categorizer.loadModel();
-      setState(() {
-        _modelReady = true;
-        _loadingCategory = false;
-      });
-      debugPrint('✅ Modelo IA cargado y listo.');
-    } catch (e) {
-      debugPrint('❌ Error al cargar modelo: $e');
-      setState(() => _loadingCategory = false);
-    }
-  }
-
-  Future<void> _onDescriptionChanged() async {
-    final text = _descController.text.trim();
-    if (!_modelReady || text.isEmpty || text.split(' ').length < 2) return;
-
-    setState(() => _loadingCategory = true);
-    try {
-      final predicted = await categorizer.predictCategory(text);
-      final normalized = _normalizeCategory(predicted);
-      setState(() => _category = normalized);
-    } catch (e) {
-      debugPrint('⚠️ Error en predicción: $e');
-    } finally {
-      setState(() => _loadingCategory = false);
-    }
+    _descriptionController.addListener(_onTextChanged);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null && args is TransactionModel) {
+        setState(() {
+          transactionToEdit = args;
+          isEditMode = true;
+          isIncome = args.isIncome;
+          _descriptionController.text = args.description;
+          _amountController.text = args.amount.toString();
+          selectedCategory = args.category;
+          selectedDate = args.date;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
-    categorizer.close();
-    _descController.removeListener(_onDescriptionChanged);
-    _descController.dispose();
+    _descriptionController.removeListener(_onTextChanged);
+    _debounce?.cancel();
+    _descriptionController.dispose();
     _amountController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit(BuildContext context, bool isIncome) async {
-    final provider = Provider.of<ExpenseProvider>(context, listen: false);
-
-    if (_loadingCategory) return; // evitar doble envío
-    if (!_formKey.currentState!.validate()) return;
-
-    final amount = double.tryParse(_amountController.text.replaceAll(',', '.'));
-    if (amount == null) {
-      // Validación extra por si el número no es correcto
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('enter_amount'.tr())),
-      );
-      return;
-    }
-
-    final tx = TransactionModel(
-      id: const Uuid().v4(),
-      description: _descController.text.trim(),
-      amount: amount,
-      category: _category,
-      date: DateTime.now(),
-      isIncome: isIncome,
-    );
-
+  Future<void> _initializeModel() async {
     try {
-      await provider.addTransaction(tx);
-      Navigator.pop(context); // cerrar pantalla al guardar
+      await categorizer.loadModel();
+      if (mounted) setState(() => _modelReady = true);
+      debugPrint("✅ Modelo IA listo.");
     } catch (e) {
-      debugPrint('Error guardando transacción: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error_saving'.tr(args: ['']))), // puedes agregar clave en JSON
-      );
+      debugPrint("❌ Error iniciando IA: $e");
     }
   }
 
-  // Reutilizamos el form widget para cada pestaña (ingreso/egreso)
-  Widget _buildForm(BuildContext context, bool isIncome) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          children: [
-            const SizedBox(height: 10),
+  void _onTextChanged() {
+    // Solo predecir para GASTOS, no para ingresos
+    if (!_modelReady || isIncome) {
+      debugPrint("⏸️ No se predice: modelReady=$_modelReady, isIncome=$isIncome");
+      return;
+    }
 
-            /// 📝 Descripción
-            TextFormField(
-              controller: _descController,
-              decoration: InputDecoration(
-                labelText: 'description'.tr(),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.note_alt_outlined),
-                suffixIcon: _loadingCategory
-                    ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : const Icon(Icons.auto_fix_high_outlined, color: Colors.teal),
-              ),
-              validator: (v) =>
-                  v!.isEmpty ? 'enter_valid_description'.tr() : null,
-            ),
+    final text = _descriptionController.text.trim();
+    debugPrint("📝 Texto cambió: '$text'");
 
-            const SizedBox(height: 16),
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 800), () {
+      debugPrint("⏰ Timer ejecutado, llamando a _predictCategory()");
+      _predictCategory();
+    });
+  }
 
-            /// 💰 Monto
-            TextFormField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'amount'.tr(),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.attach_money),
-              ),
-              validator: (v) => v!.isEmpty ? 'enter_amount'.tr() : null,
-            ),
+  String _normalizeCategory(String raw) {
+    final lower = raw.toLowerCase().trim();
+    debugPrint("🔄 Normalizando: '$raw' -> '$lower'");
+    
+    // Si ya viene en el formato correcto (español)
+    if (['comida', 'transporte', 'entretenimiento', 'compras', 'servicios', 
+         'salud', 'educación', 'educacion', 'hogar', 'suscripciones'].contains(lower)) {
+      // Capitalizar primera letra
+      return raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+    }
+    
+    // Mapeo de inglés a español (por si acaso)
+    switch (lower) {
+      case 'food':
+        return 'Comida';
+      case 'transport':
+        return 'Transporte';
+      case 'entertainment':
+        return 'Entretenimiento';
+      case 'home':
+        return 'Hogar';
+      case 'health':
+        return 'Salud';
+      case 'shopping':
+        return 'Compras';
+      case 'education':
+        return 'Educación';
+      case 'subscriptions':
+        return 'Suscripciones';
+      case 'services':
+        return 'Servicios';
+      default:
+        debugPrint("⚠️ Categoría no reconocida: '$raw' -> 'Otros'");
+        return 'Otros';
+    }
+  }
 
-            const SizedBox(height: 16),
+  Future<void> _predictCategory() async {
+    if (!_modelReady || _predicting || isIncome) {
+      debugPrint("⏸️ Predicción cancelada: modelReady=$_modelReady, predicting=$_predicting, isIncome=$isIncome");
+      return;
+    }
 
-            /// 🏷️ Categoría (IA o manual)
-            DropdownButtonFormField<String>(
-              value: _category,
-              decoration: InputDecoration(
-                labelText: 'category_ai_or_manual'.tr(),
-                border: const OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem(value: 'Comida', child: Text('food'.tr())),
-                DropdownMenuItem(value: 'Transporte', child: Text('transport'.tr())),
-                DropdownMenuItem(value: 'Entretenimiento', child: Text('entertainment'.tr())),
-                DropdownMenuItem(value: 'Hogar', child: Text('home'.tr())),
-                DropdownMenuItem(value: 'Salud', child: Text('health'.tr())),
-                DropdownMenuItem(value: 'Compras', child: Text('shopping'.tr())),
-                DropdownMenuItem(value: 'Educación', child: Text('education'.tr())),
-                DropdownMenuItem(value: 'Suscripciones', child: Text('subscriptions'.tr())),
-                DropdownMenuItem(value: 'Finanzas', child: Text('finance'.tr())),
-                DropdownMenuItem(value: 'Otros', child: Text('others'.tr())),
-              ],
-              onChanged: (v) => setState(() => _category = v!),
-            ),
+    final text = _descriptionController.text.trim();
+    debugPrint("🔍 Intentando predecir para: '$text'");
+    
+    if (text.isEmpty || text.split(' ').length < 2) {
+      debugPrint("⚠️ Texto muy corto o vacío, mínimo 2 palabras");
+      return;
+    }
 
-            const SizedBox(height: 30),
+    if (mounted) setState(() => _predicting = true);
 
-            /// 💾 Botón Guardar (usa isIncome segun la pestaña)
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                backgroundColor: isIncome ? Colors.green : Colors.red,
-              ),
-              label: Text('save'.tr()),
-              onPressed: _loadingCategory
-                  ? null
-                  : () async {
-                      await _submit(context, isIncome);
-                    },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+    try {
+      debugPrint("🤖 Llamando a la IA...");
+      final predicted = await categorizer.predictCategory(text);
+      debugPrint("✅ IA retornó: '$predicted'");
+      
+      final normalized = _normalizeCategory(predicted);
+      debugPrint("🔄 Normalizado a: '$normalized'");
+
+      if (mounted && !isIncome) {
+        setState(() {
+          selectedCategory = normalized;
+          debugPrint("✨ Categoría actualizada en UI: '$selectedCategory'");
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ Error IA: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _predicting = false);
+      }
+    }
+  }
+
+  List<String> get currentCategories =>
+      isIncome ? incomeCategories : expenseCategories;
+
+  void _saveTransaction() {
+    if (_formKey.currentState!.validate()) {
+      final provider = Provider.of<ExpenseProvider>(context, listen: false);
+      
+      final amount = double.tryParse(_amountController.text.replaceAll(',', '.'));
+      if (amount == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ingresa un monto válido')),
+        );
+        return;
+      }
+      
+      final transaction = TransactionModel(
+        id: isEditMode ? transactionToEdit!.id : const Uuid().v4(),
+        description: _descriptionController.text.trim(),
+        category: selectedCategory,
+        amount: amount,
+        date: selectedDate,
+        isIncome: isIncome,
+      );
+
+      if (isEditMode) {
+        provider.updateTransaction(transaction);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transacción actualizada')),
+        );
+      } else {
+        provider.addTransaction(transaction);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transacción guardada')),
+        );
+      }
+
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      locale: const Locale('es', 'ES'),
     );
+    if (picked != null && picked != selectedDate) {
+      setState(() => selectedDate = picked);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Usamos DefaultTabController para las dos pestañas
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('add_transaction_title'.tr()),
-          bottom: TabBar(
-            tabs: [
-              Tab(
-                icon: const Icon(Icons.arrow_upward),
-                text: 'income'.tr(),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: Text(isEditMode ? 'Editar Transacción' : 'Agregar Transacción'),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            // 🔹 Selector de tipo: Ingreso / Gasto (Diseño mejorado)
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              Tab(
-                icon: const Icon(Icons.arrow_downward),
-                text: 'expense'.tr(),
+              child: Container(
+                height: 90,
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          debugPrint("🔄 Cambiando a Ingreso");
+                          setState(() {
+                            isIncome = true;
+                            if (!incomeCategories.contains(selectedCategory)) {
+                              selectedCategory = 'Otros';
+                            }
+                            _debounce?.cancel();
+                            if (_predicting) {
+                              _predicting = false;
+                            }
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: isIncome
+                                ? LinearGradient(
+                                    colors: [
+                                      Colors.green[600]!,
+                                      Colors.green[400]!,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isIncome
+                                      ? Colors.white.withOpacity(0.3)
+                                      : Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.arrow_upward,
+                                  color:
+                                      isIncome ? Colors.white : Colors.green,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Ingreso',
+                                style: TextStyle(
+                                  color: isIncome ? Colors.white : Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          debugPrint("🔄 Cambiando a Gasto");
+                          setState(() {
+                            isIncome = false;
+                            if (!expenseCategories
+                                .contains(selectedCategory)) {
+                              selectedCategory = 'Otros';
+                            }
+                          });
+                          if (_descriptionController.text.trim().isNotEmpty) {
+                            debugPrint(
+                                "🚀 Forzando predicción al cambiar a Gasto");
+                            Future.delayed(
+                                const Duration(milliseconds: 100), () {
+                              _predictCategory();
+                            });
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: !isIncome
+                                ? LinearGradient(
+                                    colors: [
+                                      Colors.red[600]!,
+                                      Colors.red[400]!,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: !isIncome
+                                      ? Colors.white.withOpacity(0.3)
+                                      : Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.arrow_downward,
+                                  color: !isIncome ? Colors.white : Colors.red,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Gasto',
+                                style: TextStyle(
+                                  color: !isIncome ? Colors.white : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 🔹 Descripción
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextFormField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.description_outlined,
+                        color: Colors.grey[600]),
+                    suffixIcon: _predicting && !isIncome
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : (!isIncome && _modelReady
+                            ? Icon(Icons.auto_fix_high,
+                                color: Colors.teal[400])
+                            : null),
+                    labelText: 'Descripción',
+                    labelStyle: TextStyle(color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    floatingLabelBehavior: FloatingLabelBehavior.auto,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa una descripción';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔹 Monto
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextFormField(
+                  controller: _amountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    prefixIcon:
+                        Icon(Icons.attach_money, color: Colors.grey[600]),
+                    labelText: 'Monto',
+                    labelStyle: TextStyle(color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    floatingLabelBehavior: FloatingLabelBehavior.auto,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa un monto';
+                    }
+                    if (double.tryParse(value.replaceAll(',', '.')) == null) {
+                      return 'Ingresa un número válido';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔹 Categoría
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isIncome ? Colors.green : Colors.red)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.category_outlined,
+                        color: isIncome ? Colors.green : Colors.red,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: currentCategories.contains(selectedCategory)
+                              ? selectedCategory
+                              : 'Otros',
+                          isExpanded: true,
+                          hint: Text(
+                            isIncome
+                                ? 'Categoría (Manual)'
+                                : 'Categoría (IA o Manual)',
+                            style: TextStyle(color: Colors.grey[400]),
+                          ),
+                          items: currentCategories
+                              .map((cat) => DropdownMenuItem(
+                                    value: cat,
+                                    child: Text(cat),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => selectedCategory = value!);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔹 Fecha
+            GestureDetector(
+              onTap: _selectDate,
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.calendar_today_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Fecha',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('dd MMMM yyyy', 'es')
+                                  .format(selectedDate),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 16, color: Colors.grey[400]),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // 🔹 Botón Guardar (Diseño mejorado)
+            Container(
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isIncome
+                      ? [Colors.green[600]!, Colors.green[400]!]
+                      : [Colors.red[600]!, Colors.red[400]!],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isIncome ? Colors.green : Colors.red)
+                        .withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: _saveTransaction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.save_outlined, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      isEditMode ? 'Actualizar' : 'Guardar',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 🔹 Botón Eliminar (solo en modo edición)
+            if (isEditMode) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Eliminar transacción'),
+                      content: const Text(
+                          '¿Estás seguro de eliminar esta transacción?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Provider.of<ExpenseProvider>(context,
+                                    listen: false)
+                                .deleteTransaction(
+                                    transactionToEdit!.id, isIncome);
+                            Navigator.pop(context);
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Transacción eliminada')),
+                            );
+                          },
+                          child: const Text('Eliminar',
+                              style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.delete_outline),
+                    SizedBox(width: 8),
+                    Text(
+                      'Eliminar transacción',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            // Tab 0: Ingreso
-            _buildForm(context, true),
-            // Tab 1: Gasto
-            _buildForm(context, false),
           ],
         ),
       ),
