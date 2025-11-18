@@ -12,6 +12,7 @@ import 'screens/summary_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/transactions_screen.dart';
+import 'screens/profile_screen.dart';
 import 'firebase_options.dart';
 import '../services/expense_categorizer.dart';
 
@@ -98,6 +99,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/transactions': (context) => const TransactionsScreen(),
+        '/profile': (context) => const ProfileScreen(),
       },
     );
   }

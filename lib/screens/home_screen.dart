@@ -492,9 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/transactions');
               break;
             case 2:
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Perfil próximamente')),
-              );
+              Navigator.pushNamed(context, '/profile'); // ← Cambiar esto
               break;
           }
         },
