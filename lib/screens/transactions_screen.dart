@@ -24,6 +24,29 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     super.dispose();
   }
 
+  // 🔹 Función para obtener el nombre del mes traducido
+  String _getMonthName(int month) {
+    const monthKeys = [
+      'january',
+      'february',
+      'march',
+      'april',
+      'may',
+      'june',
+      'july',
+      'august',
+      'september',
+      'october',
+      'november',
+      'december',
+    ];
+    
+    if (month >= 1 && month <= 12) {
+      return monthKeys[month - 1].tr();
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ExpenseProvider>(context);
@@ -82,8 +105,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         .map((m) => DropdownMenuItem(
                               value: m,
                               child: Text(
-                                _capitalize(
-                                    DateFormat.MMMM('es').format(DateTime(0, m))),
+                                _capitalize(_getMonthName(m)), // 🔹 CAMBIO AQUÍ
                               ),
                             ))
                         .toList(),
@@ -147,7 +169,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'Resumen del periodo',
+                            'summaryPeriod'.tr(),
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -163,7 +185,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           Expanded(
                             child: _MonthSummaryItem(
                               icon: Icons.trending_up,
-                              label: 'Ingreso',
+                              label: 'income'.tr(), // 🔹 TRADUCCIÓN
                               amount: monthIncome,
                               color: Colors.green,
                             ),
@@ -172,7 +194,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           Expanded(
                             child: _MonthSummaryItem(
                               icon: Icons.trending_down,
-                              label: 'Gasto',
+                              label: 'expense'.tr(), // 🔹 TRADUCCIÓN
                               amount: monthExpense,
                               color: Colors.red,
                             ),
@@ -247,7 +269,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Balance del mes',
+                                      'monthBalance'.tr(), // 🔹 TRADUCCIÓN
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
@@ -257,8 +279,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       monthBalance >= 0
-                                          ? 'Superávit'
-                                          : 'Déficit',
+                                          ? 'surplus'.tr() // 🔹 TRADUCCIÓN
+                                          : 'deficit'.tr(), // 🔹 TRADUCCIÓN
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: monthBalance >= 0
@@ -309,7 +331,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   onChanged: (value) => setState(() => searchQuery = value),
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Buscar por descripción o categoría...',
+                    hintText: 'searchPlaceholder'.tr(), // 🔹 TRADUCCIÓN
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                     prefixIcon:
                         Icon(Icons.search, color: Colors.grey[600], size: 20),
@@ -349,8 +371,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           const SizedBox(height: 16),
                           Text(
                             searchQuery.isEmpty
-                                ? 'No hay transacciones este mes'
-                                : 'No se encontraron resultados',
+                                ? 'noTransactionsMonth'.tr() // 🔹 TRADUCCIÓN
+                                : 'noResults'.tr(), // 🔹 TRADUCCIÓN
                             style:
                                 TextStyle(color: Colors.grey[600], fontSize: 16),
                           ),
@@ -381,7 +403,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, '/add'),
         icon: const Icon(Icons.add),
-        label: const Text('Agregar'),
+        label: Text('add'.tr()), // 🔹 TRADUCCIÓN
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
@@ -560,7 +582,7 @@ class _TransactionTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         subtitle: Text(
-          '${tx.category} • ${DateFormat('dd MMM', 'es').format(tx.date)}',
+          '${tx.category} • ${DateFormat('dd MMM', context.locale.toString()).format(tx.date)}',
           style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
         trailing: Text(
@@ -573,13 +595,5 @@ class _TransactionTile extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// 🔹 Extensión para capitalizar
-extension StringCasingExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

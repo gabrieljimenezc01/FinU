@@ -20,8 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final provider = Provider.of<ExpenseProvider>(context);
-    
-    // Estadísticas del usuario
+
     final totalTransactions = provider.transactions.length;
     final totalIncome = provider.transactions
         .where((t) => t.isIncome)
@@ -32,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perfil'),
+        title: Text('profile'.tr()),
         centerTitle: true,
         elevation: 0,
       ),
@@ -88,10 +87,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Nombre
                     Text(
-                      user?.displayName ?? 'Usuario',
+                      user?.displayName ?? 'user'.tr(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -99,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Email
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -118,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              user?.email ?? 'Sin email',
+                              user?.email ?? 'no_email'.tr(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -168,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Estadísticas Generales',
+                          'general_stats'.tr(),
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -178,30 +177,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
-                  // Total de Transacciones
+
                   _StatItem(
                     icon: Icons.receipt_long,
-                    label: 'Total de transacciones',
+                    label: 'total_transactions'.tr(),
                     value: '$totalTransactions',
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 12),
-                  
-                  // Total Ingresos
+
                   _StatItem(
                     icon: Icons.trending_up,
-                    label: 'Total ingresos',
-                    value: '\$${NumberFormat("#,##0", "es_CO").format(totalIncome)}',
+                    label: 'total_income'.tr(),
+                    value:
+                        '\$${NumberFormat("#,##0", "es_CO").format(totalIncome)}',
                     color: Colors.green,
                   ),
                   const SizedBox(height: 12),
-                  
-                  // Total Gastos
+
                   _StatItem(
                     icon: Icons.trending_down,
-                    label: 'Total gastos',
-                    value: '\$${NumberFormat("#,##0", "es_CO").format(totalExpense)}',
+                    label: 'total_expenses'.tr(),
+                    value:
+                        '\$${NumberFormat("#,##0", "es_CO").format(totalExpense)}',
                     color: Colors.red,
                   ),
                 ],
@@ -221,20 +219,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _ActionTile(
                   icon: Icons.help_outline,
-                  title: 'Ayuda y Soporte',
+                  title: 'help_support'.tr(),
                   color: Colors.blue,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Próximamente: Centro de ayuda'),
+                      SnackBar(
+                        content: Text('help_center_soon'.tr()),
                       ),
                     );
                   },
                 ),
                 const Divider(height: 1),
+
                 _ActionTile(
                   icon: Icons.info_outline,
-                  title: 'Acerca de',
+                  title: 'about'.tr(),
                   color: Colors.purple,
                   onTap: () {
                     showDialog(
@@ -243,22 +242,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        title: const Text('Acerca de'),
-                        content: const Column(
+                        title: Text('about'.tr()),
+                        content: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('App de Finanzas Personales'),
-                            SizedBox(height: 8),
-                            Text('Versión: 1.0.0'),
-                            SizedBox(height: 8),
-                            Text('Desarrollado con ❤️ en Flutter'),
+                            Text('about_description'.tr()),
+                            const SizedBox(height: 8),
+                            Text('${'version'.tr()}: 1.0.0'),
+                            const SizedBox(height: 8),
+                            Text('made_with_love'.tr()),
                           ],
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cerrar'),
+                            child: Text('close'.tr()),
                           ),
                         ],
                       ),
@@ -266,9 +265,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 const Divider(height: 1),
+
                 _ActionTile(
                   icon: Icons.logout,
-                  title: 'Cerrar Sesión',
+                  title: 'logout'.tr(),
                   color: Colors.red,
                   onTap: () => _showLogoutDialog(context),
                 ),
@@ -276,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          const SizedBox(height: 80), // Espacio para el bottom nav
+          const SizedBox(height: 80),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -290,14 +290,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.pushReplacementNamed(context, '/transactions');
               break;
             case 2:
-              break; // Ya estamos aquí
+              break;
           }
         },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Hogar'),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.home), label: 'home'.tr()),
           NavigationDestination(
-              icon: Icon(Icons.list_alt), label: 'Transacciones'),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Perfil'),
+              icon: const Icon(Icons.list_alt), label: 'transactions'.tr()),
+          NavigationDestination(
+              icon: const Icon(Icons.person), label: 'profile'.tr()),
         ],
       ),
     );
@@ -310,12 +311,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+        title: Text('logout'.tr()),
+        content: Text('logout_confirm'.tr()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text('cancel'.tr()),
           ),
           TextButton(
             onPressed: () async {
@@ -324,8 +325,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.of(context).pushReplacementNamed('/login');
               }
             },
-            child: const Text('Cerrar Sesión',
-                style: TextStyle(color: Colors.red)),
+            child:
+                Text('logout'.tr(), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -399,70 +400,6 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-// 🔹 Widget para items de configuración
-class _SettingTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  const _SettingTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 20, color: Colors.grey[700]),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (trailing != null) trailing!,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // 🔹 Widget para acciones
 class _ActionTile extends StatelessWidget {
   final IconData icon;
@@ -497,7 +434,8 @@ class _ActionTile extends StatelessWidget {
           color: color,
         ),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+      trailing:
+          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
     );
   }
 }

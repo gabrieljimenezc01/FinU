@@ -37,6 +37,29 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 🔹 NUEVA FUNCIÓN: Obtiene el nombre del mes traducido
+  String _getMonthName(int month) {
+    const monthKeys = [
+      'january',
+      'february',
+      'march',
+      'april',
+      'may',
+      'june',
+      'july',
+      'august',
+      'september',
+      'october',
+      'november',
+      'december',
+    ];
+    
+    if (month >= 1 && month <= 12) {
+      return monthKeys[month - 1].tr();
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ExpenseProvider>(context);
@@ -182,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                'Patrimonio total',
+                                                'totalAssets'.tr(),
                                                 style: TextStyle(
                                                   color: Colors.white
                                                       .withOpacity(0.6),
@@ -212,8 +235,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             const SizedBox(width: 4),
                                             Text(
                                               provider.totalBalance >= 0
-                                                  ? 'Positivo'
-                                                  : 'Negativo',
+                                                  ? 'positive'.tr()
+                                                  : 'negative'.tr(),
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 12,
@@ -274,7 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      _capitalize(DateFormat.MMMM('es').format(now)),
+                                      // 🔹 CAMBIO: Usar la función _getMonthName en lugar de DateFormat
+                                      _capitalize(_getMonthName(now.month)),
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge
@@ -292,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Expanded(
                                       child: _MonthSummaryItem(
                                         icon: Icons.trending_up,
-                                        label: 'Ingreso',
+                                        label: 'income'.tr(),
                                         amount: monthIncome,
                                         color: Colors.green,
                                       ),
@@ -301,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Expanded(
                                       child: _MonthSummaryItem(
                                         icon: Icons.trending_down,
-                                        label: 'Gasto',
+                                        label: 'expense'.tr(),
                                         amount: monthExpense,
                                         color: Colors.red,
                                       ),
@@ -379,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'Balance del mes',
+                                                'monthBalance'.tr(),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey[600],
@@ -389,8 +413,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 monthBalance >= 0
-                                                    ? 'Superávit'
-                                                    : 'Déficit',
+                                                    ? 'surplus'.tr()
+                                                    : 'deficit'.tr(),
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   color: monthBalance >= 0
@@ -430,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (ingresos.isNotEmpty)
                           _buildChartCard(
                             context,
-                            title: 'Ingresos por Categoría',
+                            title: 'incomeByCategory'.tr(),
                             transactions: ingresos,
                             isIncome: true,
                           ),
@@ -442,7 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (egresos.isNotEmpty)
                           _buildChartCard(
                             context,
-                            title: 'Gastos por Categoría',
+                            title: 'expenseByCategory'.tr(),
                             transactions: egresos,
                             isIncome: false,
                           ),
@@ -492,13 +516,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/transactions');
               break;
             case 2:
-              Navigator.pushNamed(context, '/profile'); // ← Cambiar esto
+              Navigator.pushNamed(context, '/profile');
               break;
           }
         },
         destinations: [
           NavigationDestination(
-              icon: const Icon(Icons.home), label: 'Hogar'),
+              icon: const Icon(Icons.home), label: 'home'.tr()),
           NavigationDestination(
               icon: const Icon(Icons.list_alt), label: 'transactions'.tr()),
           NavigationDestination(
@@ -784,7 +808,7 @@ class _TransactionTile extends StatelessWidget {
         title: Text(tx.description,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          '${tx.category} • ${DateFormat('dd MMM', 'es').format(tx.date)}',
+          '${tx.category} • ${DateFormat('dd MMM', context.locale.toString()).format(tx.date)}',
           style: const TextStyle(color: Colors.grey),
         ),
         trailing: Text(
