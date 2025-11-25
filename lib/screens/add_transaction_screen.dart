@@ -35,25 +35,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   // Categorías
   final List<String> incomeCategories = [
-    'Salario',
-    'Freelance',
-    'Inversiones',
-    'Venta',
-    'Regalo',
-    'Otros'
+    'salary'.tr(),
+    'freelance'.tr(),
+    'investments'.tr(),
+    'sale'.tr(),
+    'gift'.tr(),
+    'others'.tr(),
   ];
 
   final List<String> expenseCategories = [
-    'Comida',
-    'Transporte',
-    'Entretenimiento',
-    'Compras',
-    'Servicios',
-    'Salud',
-    'Educación',
-    'Hogar',
-    'Suscripciones',
-    'Otros'
+    'food'.tr(),
+    'transport'.tr(),
+    'entertainment'.tr(),
+    'shopping'.tr(),
+    'services'.tr(),
+    'health'.tr(),
+    'education'.tr(),
+    'home'.tr(),
+    'subscriptions'.tr(),
+    'others'.tr(),
   ];
 
   @override
@@ -147,7 +147,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return 'Servicios';
       default:
         debugPrint("⚠️ Categoría no reconocida: '$raw' -> 'Otros'");
-        return 'Otros';
+        return 'Otro';
     }
   }
 
@@ -200,7 +200,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final amount = double.tryParse(_amountController.text.replaceAll(',', '.'));
       if (amount == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ingresa un monto válido')),
+           SnackBar(content: Text('enter_valid_amount'.tr())),
         );
         return;
       }
@@ -217,12 +217,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (isEditMode) {
         provider.updateTransaction(transaction);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transacción actualizada')),
+           SnackBar(content: Text('transaction_updated'.tr())),
         );
       } else {
         provider.addTransaction(transaction);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transacción guardada')),
+           SnackBar(content: Text('transaction_saved'.tr())),
         );
       }
 
@@ -248,7 +248,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(isEditMode ? 'Editar Transacción' : 'Agregar Transacción'),
+        title: Text(isEditMode ? 'edit_transaction'.tr() : 'add_transaction'.tr()),
         centerTitle: true,
         elevation: 0,
       ),
@@ -317,7 +317,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Ingreso',
+                                'income'.tr(),
                                 style: TextStyle(
                                   color: isIncome ? Colors.white : Colors.green,
                                   fontWeight: FontWeight.bold,
@@ -383,7 +383,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Gasto',
+                                'expense'.tr(),
                                 style: TextStyle(
                                   color: !isIncome ? Colors.white : Colors.red,
                                   fontWeight: FontWeight.bold,
@@ -429,14 +429,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             ? Icon(Icons.auto_fix_high,
                                 color: Colors.teal[400])
                             : null),
-                    labelText: 'Descripción',
+                    labelText: 'description_label'.tr(),
                     labelStyle: TextStyle(color: Colors.grey[600]),
                     border: InputBorder.none,
                     floatingLabelBehavior: FloatingLabelBehavior.auto,
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Ingresa una descripción';
+                      return 'enter_description'.tr();
                     }
                     return null;
                   },
@@ -461,17 +461,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   decoration: InputDecoration(
                     prefixIcon:
                         Icon(Icons.attach_money, color: Colors.grey[600]),
-                    labelText: 'Monto',
+                    labelText: 'amount_label'.tr(),
                     labelStyle: TextStyle(color: Colors.grey[600]),
                     border: InputBorder.none,
                     floatingLabelBehavior: FloatingLabelBehavior.auto,
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Ingresa un monto';
+                      return 'enter_amount'.tr();
                     }
                     if (double.tryParse(value.replaceAll(',', '.')) == null) {
-                      return 'Ingresa un número válido';
+                      return 'enter_valid_number'.tr();
                     }
                     return null;
                   },
@@ -511,12 +511,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         child: DropdownButton<String>(
                           value: currentCategories.contains(selectedCategory)
                               ? selectedCategory
-                              : 'Otros',
+                              : null,
                           isExpanded: true,
                           hint: Text(
                             isIncome
-                                ? 'Categoría (Manual)'
-                                : 'Categoría (IA o Manual)',
+                                ? 'category_manual'.tr() : 'category_ai_manual'.tr(),
                             style: TextStyle(color: Colors.grey[400]),
                           ),
                           items: currentCategories
@@ -571,7 +570,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Fecha',
+                              'date_label'.tr(),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -579,7 +578,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat('dd MMMM yyyy', 'es')
+                              DateFormat('dd MMMM yyyy', context.locale.languageCode)
                                   .format(selectedDate),
                               style: const TextStyle(
                                 fontSize: 16,
@@ -635,7 +634,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     const Icon(Icons.save_outlined, color: Colors.white),
                     const SizedBox(width: 8),
                     Text(
-                      isEditMode ? 'Actualizar' : 'Guardar',
+                      isEditMode ? 'update'.tr() : 'save'.tr(),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -657,13 +656,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     builder: (context) => AlertDialog(
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
-                      title: const Text('Eliminar transacción'),
-                      content: const Text(
-                          '¿Estás seguro de eliminar esta transacción?'),
+                      title: Text('delete_transaction_title'.tr()),
+                      content: Text('delete_transaction_confirm'.tr()),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
+                          child: Text('cancel'.tr()),
                         ),
                         TextButton(
                           onPressed: () {
@@ -674,11 +672,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             Navigator.pop(context);
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Transacción eliminada')),
+                               SnackBar(
+                                  content: Text('transaction_deleted'.tr())),
                             );
                           },
-                          child: const Text('Eliminar',
+                          child: Text('delete'.tr(),
                               style: TextStyle(color: Colors.red)),
                         ),
                       ],
@@ -693,13 +691,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Row(
+                child:  Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.delete_outline),
                     SizedBox(width: 8),
                     Text(
-                      'Eliminar transacción',
+                      'delete_transaction'.tr(),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

@@ -102,5 +102,50 @@
     "freelance": "Freelance",
     "investments": "Inversiones",
     "sale": "Venta",
-    "gift": "Regalo"
+    "gift": "Regalo",
+    "salary": "Salario",
+    "freelance": "Freelance",
+    "investments": "Inversiones",
+    "sale": "Venta",
+    "gift": "Regalo",
+    "others": "Otros",
+
+    "food": "Comida",
+    "transport": "Transporte",
+    "entertainment": "Entretenimiento",
+    "shopping": "Compras",
+    "services": "Servicios",
+    "health": "Salud",
+    "education": "Educación",
+    "home": "Hogar",
+    "subscriptions": "Suscripciones",
+     "enter_valid_amount": "Ingresa un monto válido",
+    "transaction_updated": "Transacción actualizada",
+    "transaction_saved": "Transacción guardada",
+
+    "edit_transaction": "Editar Transacción",
+    "add_transaction": "Agregar Transacción",
+
+    "income": "Ingreso",
+    "expense": "Gasto",
+    "description_label": "Descripción",
+    "enter_description": "Ingresa una descripción",
+
+    "amount_label": "Monto",
+    "enter_amount": "Ingresa un monto",
+    "enter_valid_number": "Ingresa un número válido",
+
+    "category_manual": "Categoría (Manual)",
+    "category_ai_manual": "Categoría (IA o Manual)",
+
+    "date_label": "Fecha",
+    "update": "Actualizar",
+  "save": "Guardar",
+
+  "delete_transaction_title": "Eliminar transacción",
+  "delete_transaction_confirm": "¿Estás seguro de eliminar esta transacción?",
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "transaction_deleted": "Transacción eliminada",
+  "delete_transaction": "Eliminar transacción"
 }
